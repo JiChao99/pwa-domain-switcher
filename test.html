@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain Switcher - Test</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#000000">
+    <style>
+        :root {
+            --bg: #000;
+            --bg-elevated: #1c1c1e;
+            --text: #fff;
+            --text-secondary: #86868b;
+            --accent: #0a84ff;
+            --success: #30d158;
+            --warning: #ff9f0a;
+            --error: #ff453a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 40px 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .card {
+            background: var(--bg-elevated);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .status-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .status-row:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-size: 15px;
+        }
+
+        .status-value {
+            font-family: "SF Mono", SFMono-Regular, ui-monospace, monospace;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .status-value.active {
+            color: var(--success);
+        }
+
+        .domain-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .domain-tag {
+            font-family: "SF Mono", SFMono-Regular, ui-monospace, monospace;
+            font-size: 13px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: var(--text-secondary);
+        }
+
+        .domain-tag.current {
+            background: var(--success);
+            color: var(--bg);
+        }
+
+        .domain-tag.testing {
+            background: var(--warning);
+            color: var(--bg);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .domain-tag.failed {
+            background: var(--error);
+            color: var(--text);
+            opacity: 0.7;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: "SF Mono", SFMono-Regular, ui-monospace, monospace;
+            font-size: 12px;
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+
+        .log-entry {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            gap: 12px;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .log-msg {
+            flex: 1;
+        }
+
+        .log-entry.success .log-msg { color: var(--success); }
+        .log-entry.error .log-msg { color: var(--error); }
+        .log-entry.warning .log-msg { color: var(--warning); }
+
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 100px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        .btn:disabled {
+            background: rgba(255,255,255,0.2);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden { display: none !important; }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Domain Switcher Test</h1>
+            <div class="subtitle">Diagnostic & Configuration</div>
+        </header>
+
+        <div class="card">
+            <div class="card-title">System Status</div>
+            <div class="status-row">
+                <span class="status-label">Current Domain</span>
+                <span class="status-value" id="currentDomain">-</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Service Worker</span>
+                <span class="status-value" id="swStatus">Checking...</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">PWA Mode</span>
+                <span class="status-value" id="pwaStatus">-</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Cache Status</span>
+                <span class="status-value" id="cacheStatus">-</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Domain Configuration</div>
+            <div class="domain-list" id="domainList"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Actions</div>
+            <div class="actions">
+                <button class="btn" id="checkBtn" onclick="runDiagnostics()">
+                    <span id="btnSpinner" class="spinner hidden"></span>
+                    <span id="btnText">Check Domains</span>
+                </button>
+                <button class="btn" id="installBtn" disabled>Add to Home Screen</button>
+                <button class="btn" style="background: rgba(255,255,255,0.1);" onclick="clearCache()">Clear Cache</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Activity Log</div>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry info">
+                    <span class="log-time">--:--:--</span>
+                    <span class="log-msg">Test page loaded</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(msg, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            
+            const time = document.createElement('span');
+            time.className = 'log-time';
+            time.textContent = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const message = document.createElement('span');
+            message.className = 'log-msg';
+            message.textContent = msg;
+            
+            entry.appendChild(time);
+            entry.appendChild(message);
+            container.insertBefore(entry, container.firstChild);
+        }
+
+        document.getElementById('currentDomain').textContent = window.location.host;
+
+        // Check Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => {
+                    document.getElementById('swStatus').textContent = 'Active';
+                    document.getElementById('swStatus').classList.add('active');
+                    log('Service Worker registered', 'success');
+                })
+                .catch(err => {
+                    document.getElementById('swStatus').textContent = 'Failed';
+                    log('Service Worker registration failed: ' + err.message, 'error');
+                });
+        } else {
+            document.getElementById('swStatus').textContent = 'Not Supported';
+            log('Service Worker not supported', 'error');
+        }
+
+        // Check PWA Mode
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+        const isStandaloneIOS = window.navigator.standalone === true;
+        if (isStandalone || isStandaloneIOS) {
+            document.getElementById('pwaStatus').textContent = 'Active';
+            document.getElementById('pwaStatus').classList.add('active');
+            log('Running in PWA mode', 'success');
+        } else {
+            document.getElementById('pwaStatus').textContent = 'Browser';
+            log('Running in browser mode', 'info');
+        }
+
+        // Check Cache
+        caches.open('domain-switcher-v1').then(cache => {
+            cache.match('/domains.json').then(response => {
+                if (response) {
+                    document.getElementById('cacheStatus').textContent = 'Cached';
+                    document.getElementById('cacheStatus').classList.add('active');
+                    log('Domain config cached', 'success');
+                } else {
+                    document.getElementById('cacheStatus').textContent = 'Empty';
+                    log('Cache empty', 'warning');
+                }
+            });
+        });
+
+        // Load domains
+        async function loadDomains() {
+            try {
+                const response = await fetch('/domains.json?v=' + Date.now(), { cache: 'no-cache' });
+                const domains = await response.json();
+                
+                const container = document.getElementById('domainList');
+                container.innerHTML = '';
+                
+                domains.forEach(domain => {
+                    const tag = document.createElement('span');
+                    tag.className = 'domain-tag';
+                    tag.textContent = domain;
+                    if (domain === window.location.host) {
+                        tag.classList.add('current');
+                    }
+                    container.appendChild(tag);
+                });
+                
+                log('Loaded ' + domains.length + ' domains', 'success');
+                return domains;
+            } catch (err) {
+                log('Failed to load domains: ' + err.message, 'error');
+                return [];
+            }
+        }
+
+        loadDomains();
+
+        // Run diagnostics
+        async function runDiagnostics() {
+            const btn = document.getElementById('checkBtn');
+            const spinner = document.getElementById('btnSpinner');
+            const text = document.getElementById('btnText');
+            
+            btn.disabled = true;
+            spinner.classList.remove('hidden');
+            text.textContent = 'Checking...';
+            
+            const domains = await loadDomains();
+            const currentHost = window.location.host;
+            
+            log('Starting domain check...', 'info');
+            
+            // Update UI to show testing state
+            const updateTestingUI = (testingDomain, failedDomains = []) => {
+                const container = document.getElementById('domainList');
+                container.innerHTML = '';
+                domains.forEach(domain => {
+                    const tag = document.createElement('span');
+                    tag.className = 'domain-tag';
+                    tag.textContent = domain;
+                    if (domain === currentHost) {
+                        tag.classList.add('current');
+                    } else if (domain === testingDomain) {
+                        tag.classList.add('testing');
+                    } else if (failedDomains.includes(domain)) {
+                        tag.classList.add('failed');
+                    }
+                    container.appendChild(tag);
+                });
+            };
+
+            // Check current domain first
+            log('Checking current domain: ' + currentHost, 'info');
+            const isCurrentWorking = await testDomain(currentHost);
+            
+            if (isCurrentWorking) {
+                log('Current domain is available', 'success');
+                btn.disabled = false;
+                spinner.classList.add('hidden');
+                text.textContent = 'Check Domains';
+                return;
+            }
+            
+            log('Current domain unavailable, testing alternatives...', 'warning');
+            
+            const failedDomains = [currentHost];
+            
+            for (const domain of domains) {
+                if (domain === currentHost) continue;
+                
+                log('Testing: ' + domain, 'info');
+                updateTestingUI(domain, failedDomains);
+                
+                const isWorking = await testDomain(domain);
+                
+                if (isWorking) {
+                    log('Found available domain: ' + domain, 'success');
+                    updateTestingUI(null, failedDomains);
+                    // Mark the found domain as current for UI
+                    const container = document.getElementById('domainList');
+                    const tags = container.querySelectorAll('.domain-tag');
+                    tags.forEach(tag => {
+                        if (tag.textContent === domain) tag.classList.add('current');
+                    });
+                    
+                    setTimeout(() => {
+                        window.location.href = 'https://' + domain + '/test.html';
+                    }, 2000);
+                    return;
+                }
+                
+                failedDomains.push(domain);
+                updateTestingUI(null, failedDomains);
+            }
+            
+            log('All domains unavailable', 'error');
+            btn.disabled = false;
+            spinner.classList.add('hidden');
+            text.textContent = 'Check Domains';
+        }
+
+        async function testDomain(domain) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                
+                await fetch(`https://${domain}/sw.js`, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    cache: 'no-cache',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                return true;
+            } catch (err) {
+                return false;
+            }
+        }
+
+        function clearCache() {
+            caches.delete('domain-switcher-v1').then(() => {
+                log('Cache cleared', 'success');
+                document.getElementById('cacheStatus').textContent = 'Cleared';
+                document.getElementById('cacheStatus').classList.remove('active');
+                loadDomains();
+            });
+        }
+
+        // PWA Install
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('installBtn');
+            btn.disabled = false;
+            btn.onclick = async () => {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    log('PWA installed', 'success');
+                    btn.disabled = true;
+                    btn.textContent = 'Installed';
+                }
+                deferredPrompt = null;
+            };
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain Switcher</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#000000">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #000;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+
+        .container {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .domain {
+            font-family: "SF Mono", SFMono-Regular, ui-monospace, monospace;
+            font-size: clamp(32px, 10vw, 72px);
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: #fff;
+            word-break: break-all;
+        }
+
+        .status {
+            font-size: 14px;
+            color: #86868b;
+            margin-top: 20px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #34c759;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .install-prompt {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            padding: 16px 24px;
+            border-radius: 100px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .install-prompt.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .install-btn {
+            background: #0071e3;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 100px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .install-btn:hover {
+            background: #0077ed;
+        }
+
+        .install-text {
+            font-size: 14px;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="domain" id="domain">...</div>
+        <div class="status">
+            <span class="indicator"></span>
+            <span id="statusText">Loading...</span>
+        </div>
+    </div>
+
+    <div class="install-prompt" id="installPrompt">
+        <span class="install-text">Add to home screen</span>
+        <button class="install-btn" id="installBtn">Install</button>
+    </div>
+
+    <script>
+        document.getElementById('domain').textContent = window.location.host;
+        
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => {
+                    document.getElementById('statusText').textContent = 'Connected';
+                })
+                .catch(() => {
+                    document.getElementById('statusText').textContent = 'Offline';
+                });
+        }
+
+        // PWA Install
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPrompt').classList.add('visible');
+        });
+
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                document.getElementById('installPrompt').classList.remove('visible');
+            }
+            deferredPrompt = null;
+        });
+
+        window.addEventListener('appinstalled', () => {
+            document.getElementById('installPrompt').classList.remove('visible');
+        });
+    </script>
+</body>
+</html>

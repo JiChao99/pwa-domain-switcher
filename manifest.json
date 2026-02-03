@@ -1,0 +1,36 @@
+{
+  "name": "Domain Switcher",
+  "short_name": "Domain Switch",
+  "description": "Auto-detect domain availability and switch automatically",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000",
+  "theme_color": "#000",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBmaWxsPSIjMDA3MWUzIj48cGF0aCBkPSJNMjU2IDBjMTQxLjQgMCAyNTYgMTE0LjYgMjU2IDI1NlMyNTYgNTEyIDI1NiA1MTJTMCA0MTQuNCAwIDI1NlMxMTQuNiAwIDI1NiAwem0wIDQ2OGM4Mi45NSAwIDE1MC4xLTQ1LjE5IDE4OC43LTExNS4zN0wzNjguMyAzMTcuM2MtMjguMzggNDQuODQtNzguNzIgNzQuNy0xMzYuMyA3NC43LTg4LjM3IDAtMTYwLTcxLjYzLTE2MC0xNjBzNzEuNjMtMTYwIDE2MC0xNjBjNTcuNTggMCAxMDcuOTIgMjkuODYgMTM2LjMgNzQuN2w3Ni40LTM1LjMzQzQwNi4xIDQ1LjE5IDMzOC45NSAwIDI1NiAwIDExNC42IDAgMCAxMTQuNiAwIDI1NnMxMTQuNiAyNTYgMjU2IDI1NnoiLz48L3N2Zz4=",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIiBmaWxsPSIjMDA3MWUzIj48cGF0aCBkPSJNOTYgMEM0My4wMSAwIDAgNDMuMDEgMCA5NnM0My4wMSA5NiA5NiA5NiA5Ni00My4wMSA5Ni05Ni00My4wMS05Ni05Ni05NnptMCAxNDRjLTI2LjUxIDAtNDgtMjEuNDktNDgtNDhzMjEuNDktNDggNDgtNDggNDggMjEuNDkgNDggNDgtMjEuNDkgNDgtNDggNDh6Ii8+PC9zdmc+",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "screenshots": [],
+  "features": [
+    "offline",
+    "background-sync"
+  ],
+  "related_applications": [],
+  "shortcuts": []
+}
