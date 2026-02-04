@@ -201,16 +201,24 @@ function notifyClients(message) {
 // Message event - handle messages from page
 self.addEventListener('message', async (event) => {
   const data = event.data;
-  
+
   if (data.type === 'CHECK_DOMAIN') {
     const currentDomain = self.location.host;
     const workingDomain = await findWorkingDomain(currentDomain);
-    
+
     if (workingDomain && workingDomain !== currentDomain) {
       event.source.postMessage({
         type: 'REDIRECT_REQUIRED',
         domain: workingDomain
       });
+    }
+  }
+
+  if (data.type === 'REFRESH_CONFIG') {
+    // Silently refresh domains.json cache in background
+    const domains = await fetchLatestDomains();
+    if (domains) {
+      console.log('[SW] Config refreshed at startup');
     }
   }
 });
@@ -280,32 +288,6 @@ self.addEventListener('fetch', (event) => {
         });
       })
   );
-});
-
-// Background sync for periodic updates
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'update-domains') {
-    event.waitUntil(
-      fetchLatestDomains().then((domains) => {
-        if (domains) {
-          console.log('[SW] Background sync updated domain config');
-        }
-      })
-    );
-  }
-});
-
-// Periodic sync
-self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'domain-check') {
-    event.waitUntil(
-      fetchLatestDomains().then((domains) => {
-        if (domains) {
-          console.log('[SW] Periodic sync updated domain config');
-        }
-      })
-    );
-  }
 });
 
 console.log('[SW] Service Worker script loaded');

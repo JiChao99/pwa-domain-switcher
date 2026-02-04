@@ -176,14 +176,16 @@
                         }
                     });
 
-                    // If in PWA mode, auto-check domain availability
+                    // If in PWA mode, auto-check domain availability and refresh config
                     if (isStandalone) {
                         document.getElementById('statusText').textContent = 'Checking domain...';
-                        
+
                         // Wait a bit for SW to be ready
                         setTimeout(() => {
                             if (registration.active) {
                                 registration.active.postMessage({ type: 'CHECK_DOMAIN' });
+                                // Silently refresh config in background
+                                registration.active.postMessage({ type: 'REFRESH_CONFIG' });
                             }
                         }, 500);
                     } else {
