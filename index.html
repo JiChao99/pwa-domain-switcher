@@ -148,7 +148,8 @@
         document.getElementById('domain').textContent = window.location.host;
 
         // Check if running in PWA mode
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                            window.navigator.standalone === true;
 
         // Register Service Worker
         if ('serviceWorker' in navigator) {
@@ -161,7 +162,7 @@
                         if (data.type === 'REDIRECT_REQUIRED') {
                             // Auto-redirect to working domain
                             document.getElementById('statusText').textContent = 'Switching...';
-                            const newUrl = 'https://' + data.domain + window.location.pathname + window.location.search;
+                            const newUrl = window.location.protocol + '//' + data.domain + window.location.pathname + window.location.search + window.location.hash;
                             window.location.replace(newUrl);
                         } else if (data.type === 'DOMAIN_CHECK') {
                             if (data.status === 'checking') {
@@ -176,18 +177,23 @@
                         }
                     });
 
-                    // If in PWA mode, auto-check domain availability and refresh config
+                    // If in PWA mode, auto-check domain availability immediately
                     if (isStandalone) {
                         document.getElementById('statusText').textContent = 'Checking domain...';
 
-                        // Wait a bit for SW to be ready
-                        setTimeout(() => {
-                            if (registration.active) {
-                                registration.active.postMessage({ type: 'CHECK_DOMAIN' });
-                                // Silently refresh config in background
-                                registration.active.postMessage({ type: 'REFRESH_CONFIG' });
+                        // Send check request as soon as SW is ready
+                        const sendCheckMessage = () => {
+                            if (navigator.serviceWorker.controller) {
+                                navigator.serviceWorker.controller.postMessage({ type: 'CHECK_DOMAIN' });
+                                navigator.serviceWorker.controller.postMessage({ type: 'REFRESH_CONFIG' });
+                            } else {
+                                // If controller not ready yet, wait a bit and try again
+                                setTimeout(sendCheckMessage, 100);
                             }
-                        }, 500);
+                        };
+
+                        // Start checking immediately
+                        sendCheckMessage();
                     } else {
                         document.getElementById('statusText').textContent = 'Connected';
                     }

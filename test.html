@@ -318,10 +318,10 @@
             log('Service Worker not supported', 'error');
         }
 
-        // Check PWA Mode
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-        const isStandaloneIOS = window.navigator.standalone === true;
-        if (isStandalone || isStandaloneIOS) {
+        // Check PWA Mode - check both standard and iOS methods
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                            window.navigator.standalone === true;
+        if (isStandalone) {
             document.getElementById('pwaStatus').textContent = 'Active';
             document.getElementById('pwaStatus').classList.add('active');
             log('Running in PWA mode', 'success');
@@ -344,9 +344,10 @@
             });
         });
 
-        // Load domains
+        // Load domains - try network first, fallback to cache
         async function loadDomains() {
             try {
+                // Try to fetch from network
                 const response = await fetch('/domains.json?v=' + Date.now(), { cache: 'no-cache' });
                 const domains = await response.json();
                 
@@ -363,11 +364,42 @@
                     container.appendChild(tag);
                 });
                 
-                log('Loaded ' + domains.length + ' domains', 'success');
+                log('Loaded ' + domains.length + ' domains from network', 'success');
                 return domains;
             } catch (err) {
-                log('Failed to load domains: ' + err.message, 'error');
-                return [];
+                // Network failed, try to load from cache
+                log('Network failed, loading from cache...', 'warning');
+                
+                try {
+                    const cache = await caches.open('domain-switcher-v1');
+                    const cachedResponse = await cache.match('/domains.json');
+                    
+                    if (cachedResponse) {
+                        const domains = await cachedResponse.json();
+                        
+                        const container = document.getElementById('domainList');
+                        container.innerHTML = '';
+                        
+                        domains.forEach(domain => {
+                            const tag = document.createElement('span');
+                            tag.className = 'domain-tag';
+                            tag.textContent = domain;
+                            if (domain === window.location.host) {
+                                tag.classList.add('current');
+                            }
+                            container.appendChild(tag);
+                        });
+                        
+                        log('Loaded ' + domains.length + ' domains from cache', 'success');
+                        return domains;
+                    } else {
+                        log('No cached domains found', 'error');
+                        return [];
+                    }
+                } catch (cacheErr) {
+                    log('Failed to load from cache: ' + cacheErr.message, 'error');
+                    return [];
+                }
             }
         }
 
@@ -442,7 +474,7 @@
                     });
 
                     setTimeout(() => {
-                        window.location.href = 'https://' + domain + window.location.pathname + window.location.search + window.location.hash;
+                        window.location.href = window.location.protocol + '//' + domain + window.location.pathname + window.location.search + window.location.hash;
                     }, 2000);
                     return;
                 }
@@ -462,7 +494,7 @@
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3000);
                 
-                await fetch(`https://${domain}/sw.js`, {
+                await fetch(`${window.location.protocol}//${domain}/sw.js`, {
                     method: 'HEAD',
                     mode: 'no-cors',
                     cache: 'no-cache',

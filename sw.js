@@ -1,22 +1,15 @@
 // Service Worker for PWA Domain Switcher
 const CACHE_NAME = 'domain-switcher-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/test.html',
-  '/manifest.json',
-  '/domains.json'
-];
 
-// Install event - cache core assets
+// Install event - only cache domains.json
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing Service Worker...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[SW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        console.log('[SW] Caching domains.json');
+        return cache.add('/domains.json');
       })
       .then(() => {
         console.log('[SW] Installation complete');
@@ -99,11 +92,13 @@ async function fetchLatestDomains() {
     });
     
     if (response.ok) {
+      // Clone response before reading it
+      const responseClone = response.clone();
       const data = await response.json();
       
-      // Update cache
+      // Update cache with the cloned response
       const cache = await caches.open(CACHE_NAME);
-      await cache.put('/domains.json', response.clone());
+      await cache.put('/domains.json', responseClone);
       
       return data;
     }
@@ -220,14 +215,16 @@ self.addEventListener('message', async (event) => {
   }
 });
 
-// Network request interception - cache-first strategy
+// Track domain check state to avoid duplicate checks
+let isCheckingDomain = false;
+
+// Network request interception
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Use network-first for domains.json
+  // Only handle domains.json with network-first + cache fallback
   if (url.pathname === '/domains.json') {
-    // Always use clean URL as cache key (without query params)
     const cacheKey = '/domains.json';
 
     event.respondWith(
@@ -248,44 +245,34 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Use cache-first for other static assets
+  // For all other requests, use network-only with domain switching on navigation failure
   event.respondWith(
-    caches.match(request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          fetch(request)
-            .then((response) => {
-              if (response.ok) {
-                caches.open(CACHE_NAME).then((cache) => {
-                  cache.put(request, response);
-                });
-              }
-            })
-            .catch(() => {
-              // Network request failed, ignore
-            });
+    fetch(request)
+      .catch(async (error) => {
+        console.error('[SW] Fetch failed:', error);
+        
+        // If it's an HTML navigation request and we're not already checking, trigger domain check
+        if (request.mode === 'navigate' && !isCheckingDomain) {
+          isCheckingDomain = true;
+          console.log('[SW] Navigation failed, checking domains...');
           
-          return cachedResponse;
+          const currentDomain = self.location.host;
+          const workingDomain = await findWorkingDomain(currentDomain);
+          
+          if (workingDomain && workingDomain !== currentDomain) {
+            // Redirect to working domain (use same protocol as current)
+            const protocol = self.location.protocol;
+            const newUrl = `${protocol}//${workingDomain}${url.pathname}${url.search}${url.hash}`;
+            console.log('[SW] Redirecting to:', newUrl);
+            
+            isCheckingDomain = false;
+            return Response.redirect(newUrl, 302);
+          }
+          
+          isCheckingDomain = false;
         }
         
-        return fetch(request)
-          .then((response) => {
-            if (response.ok) {
-              const responseClone = response.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, responseClone);
-              });
-            }
-            return response;
-          });
-      })
-      .catch((error) => {
-        console.error('[SW] Request failed:', error);
-        return new Response('Offline mode not available', {
-          status: 503,
-          statusText: 'Service Unavailable',
-          headers: { 'Content-Type': 'text/plain' }
-        });
+        throw error;
       })
   );
 });
