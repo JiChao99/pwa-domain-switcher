@@ -71,17 +71,19 @@ async function getCachedDomains() {
 // Test if domain is available
 async function testDomain(domain) {
   try {
-    const testUrl = `https://${domain}/sw.js`;
+    // Use same protocol as current page
+    const protocol = self.location.protocol;
+    const testUrl = `${protocol}//${domain}/sw.js`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
-    
+
     const response = await fetch(testUrl, {
       method: 'HEAD',
       mode: 'no-cors',
       cache: 'no-cache',
       signal: controller.signal
     });
-    
+
     clearTimeout(timeoutId);
     return true;
   } catch (error) {
@@ -170,12 +172,7 @@ async function findWorkingDomain(currentDomain) {
         status: 'success',
         domain: domain
       });
-      
-      notifyClients({
-        type: 'REDIRECT',
-        domain: domain
-      });
-      
+
       return domain;
     }
     

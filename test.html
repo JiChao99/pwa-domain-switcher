@@ -440,9 +440,9 @@
                     tags.forEach(tag => {
                         if (tag.textContent === domain) tag.classList.add('current');
                     });
-                    
+
                     setTimeout(() => {
-                        window.location.href = 'https://' + domain + '/test.html';
+                        window.location.href = 'https://' + domain + window.location.pathname + window.location.search + window.location.hash;
                     }, 2000);
                     return;
                 }
