@@ -146,12 +146,49 @@
 
     <script>
         document.getElementById('domain').textContent = window.location.host;
-        
+
+        // Check if running in PWA mode
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
         // Register Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
-                .then(() => {
-                    document.getElementById('statusText').textContent = 'Connected';
+                .then((registration) => {
+                    // Listen for messages from Service Worker
+                    navigator.serviceWorker.addEventListener('message', (event) => {
+                        const data = event.data;
+
+                        if (data.type === 'REDIRECT_REQUIRED') {
+                            // Auto-redirect to working domain
+                            document.getElementById('statusText').textContent = 'Switching...';
+                            const newUrl = 'https://' + data.domain + window.location.pathname + window.location.search;
+                            window.location.replace(newUrl);
+                        } else if (data.type === 'DOMAIN_CHECK') {
+                            if (data.status === 'checking') {
+                                document.getElementById('statusText').textContent = 'Checking ' + data.domain + '...';
+                            } else if (data.status === 'success') {
+                                document.getElementById('statusText').textContent = 'Connected';
+                            } else if (data.status === 'failed') {
+                                document.getElementById('statusText').textContent = data.domain + ' unavailable';
+                            }
+                        } else if (data.type === 'USING_CACHED') {
+                            document.getElementById('statusText').textContent = 'Using cached config';
+                        }
+                    });
+
+                    // If in PWA mode, auto-check domain availability
+                    if (isStandalone) {
+                        document.getElementById('statusText').textContent = 'Checking domain...';
+                        
+                        // Wait a bit for SW to be ready
+                        setTimeout(() => {
+                            if (registration.active) {
+                                registration.active.postMessage({ type: 'CHECK_DOMAIN' });
+                            }
+                        }, 500);
+                    } else {
+                        document.getElementById('statusText').textContent = 'Connected';
+                    }
                 })
                 .catch(() => {
                     document.getElementById('statusText').textContent = 'Offline';
