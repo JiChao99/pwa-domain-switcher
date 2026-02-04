@@ -227,19 +227,22 @@ self.addEventListener('fetch', (event) => {
   
   // Use network-first for domains.json
   if (url.pathname === '/domains.json') {
+    // Always use clean URL as cache key (without query params)
+    const cacheKey = '/domains.json';
+
     event.respondWith(
       fetch(request)
         .then((response) => {
           if (response.ok) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
+              cache.put(cacheKey, responseClone);
             });
           }
           return response;
         })
         .catch(() => {
-          return caches.match(request);
+          return caches.match(cacheKey);
         })
     );
     return;
